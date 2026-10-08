@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 // dart:convert = pour encoder/décoder le JSON
 import 'dart:convert';
 import 'package:memoireserviprox/features/auth/login_screen.dart';
+import 'package:memoireserviprox/features/client/client_commandes_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 // AuthStorage = gère le token JWT en local (SharedPreferences)
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // const = créées une seule fois, jamais recréées
   final List<Widget> _pages = const [
     _HomeContent(),
-    _CommandesPage(),
+     ClientCommandesScreen(),
     _NotifsPage(),
     _ProfilPage(),
   ];
@@ -1505,16 +1506,16 @@ class _HomeContentState extends State<_HomeContent> {
 // ══════════════════════════════════════════════════════════
 
 // Page Commandes — à implémenter
-class _CommandesPage extends StatelessWidget {
-  const _CommandesPage();
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text("Mes commandes")),
-    body: const Center(
-      child: Text("Commandes — En cours...")),
-  );
-}
+// class _CommandesPage extends StatelessWidget {
+//   const _CommandesPage();
+//   @override
+//   Widget build(BuildContext context) => Scaffold(
+//     appBar: AppBar(
+//       title: const Text("Mes commandes")),
+//     body: const Center(
+//       child: Text("Commandes — En cours...")),
+//   );
+// }
 
 // Page Notifications — à implémenter
 class _NotifsPage extends StatelessWidget {

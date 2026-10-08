@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:memoireserviprox/features/prestataire/prestataire_home_screen.dart';
 import '../../core/constants/app_colors.dart';
 import 'login_screen.dart';
 import '../../core/services/auth_storage.dart';
 import '../home/home_screen.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -48,19 +50,57 @@ class _SplashScreenState extends State<SplashScreen>
     //     );
     //   }
     // });
+    // Future.delayed(const Duration(seconds: 3), () async {
+    //   if (mounted) {
+    // // Vérifier si token existe en local
+    // final isLoggedIn = await AuthStorage.isLoggedIn();
+
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (_) => isLoggedIn
+    //       // Déjà connecté → HomeScreen directement
+    //       ? const HomeScreen()
+    //       // Pas connecté → LoginScreen
+    //       : const LoginScreen(),
+    //   ),
+    // );
+    //     }
+    // });
+
     Future.delayed(const Duration(seconds: 3), () async {
-      if (mounted) {
-    // Vérifier si token existe en local
+  if (mounted) {
     final isLoggedIn = await AuthStorage.isLoggedIn();
+
+    if (!isLoggedIn) {
+      // Pas connecté → LoginScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
+    // ← AJOUT : redirection selon le rôle
+    final role = await AuthStorage.getRole();
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => isLoggedIn
-          // Déjà connecté → HomeScreen directement
-          ? const HomeScreen()
-          // Pas connecté → LoginScreen
-          : const LoginScreen(),
+        builder: (_) {
+          switch (role.toUpperCase()) {
+            case 'PRESTATAIRE':
+              // ← Vers dashboard prestataire
+              return const PrestataireHomeScreen();
+            case 'ADMIN':
+              // ← Vers dashboard admin
+              //return const AdminHomeScreen();
+            default:
+              // CLIENT ou autre → HomeScreen
+              return const HomeScreen();
+          }
+        },
       ),
     );
   }
