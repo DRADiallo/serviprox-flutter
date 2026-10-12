@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -22,16 +24,17 @@ class _ClientCommandesScreenState
   bool _isLoading = true;
   List<dynamic> _commandes = [];
   String _filterStatut = 'TOUS';
+  //Timer? _refreshTimer;
 
   final List<Map<String, String>> _filtres = [
   {'key': 'TOUS',               'label': 'Toutes'},
   {'key': 'CREE',               'label': 'En attente'},
   {'key': 'CONFIRMEE',          'label': 'Confirmées'},
-  {'key': 'EN_COLLECTE',        'label': '🛵 Collecte'},
+  {'key': 'EN_COLLECTE',        'label': ' Collecte'},
   {'key': 'EN_VERIFICATION',    'label': '?? Vérification'},
   {'key': 'EN_TRAITEMENT',      'label': 'En cours'},
-  {'key': 'TRAITEMENT_TERMINE', 'label': '💰 À payer'},
-  {'key': 'EN_LIVRAISON',       'label': '🛵 Livraison'},
+  {'key': 'TRAITEMENT_TERMINE', 'label': ' À payer'},
+  {'key': 'EN_LIVRAISON',       'label': ' Livraison'},
   {'key': 'VERIFICATION_FINALE','label': 'Vérif. finale'},
   {'key': 'CLOTUREE',           'label': ' Clôturées'},
   {'key': 'ANNULEE',            'label': 'Annulées'},
@@ -42,10 +45,21 @@ class _ClientCommandesScreenState
   void initState() {
     super.initState();
     _loadCommandes();
+    // _refreshTimer = Timer.periodic(
+    // const Duration(seconds: 15),
+    // (_) => _loadCommandes(silent: true),
+  
   }
 
+  @override
+  void dispose() {
+ // _refreshTimer?.cancel();
+  super.dispose();
+}
+
   // ── Charger commandes ─────────────────────────────
-  Future<void> _loadCommandes() async {
+  Future<void> _loadCommandes({
+    bool silent = false}) async {
     setState(() => _isLoading = true);
     try {
       final token  = await AuthStorage.getToken();
@@ -841,7 +855,7 @@ class _ClientCommandesScreenState
                     child: Text(
                       cmd['montantTotal'] != null &&
                       cmd['montantTotal'] > 0
-                        ? "💰 Prix réel fixé : "
+                        ? " Prix réel fixé : "
                           "${(cmd['montantTotal'] ?? 0).toInt()} FCFA\n"
                           "Veuillez confirmer !"
                         : " ?? Vérification en cours...\n"
@@ -857,9 +871,9 @@ class _ClientCommandesScreenState
             ),
 
             // ← Si prix fixé → boutons accepter/refuser
-            if (cmd['prixAccepteClient'] == false &&
+            if (cmd['prixAccepteClient'] != true &&
                 cmd['montantTotal'] != null &&
-                cmd['montantTotal'] > 0) ...[
+                (cmd['montantTotal'] as num) > 0) ...[
               const SizedBox(height: 8),
 
               // Détail prix
@@ -915,7 +929,7 @@ class _ClientCommandesScreenState
                         _accepterPrix(id, 'REFUSER'),
                       icon: const Icon(
                         Icons.close, size: 14),
-                      label: Text("❌ Refuser",
+                      label: Text(" Refuser",
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w600)),
@@ -996,7 +1010,7 @@ class _ClientCommandesScreenState
             icon: const Icon(
               Icons.payment_outlined, size: 18),
             label: Text(
-              "💰 Effectuer le paiement",
+              " Effectuer le paiement",
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600)),
@@ -1021,7 +1035,7 @@ class _ClientCommandesScreenState
                 color: AppColors.primary, size: 14),
               const SizedBox(width: 6),
               Text(
-                "🚚 Votre commande est en livraison",
+                " Votre commande est en livraison",
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   color: AppColors.primary,
@@ -1034,121 +1048,298 @@ class _ClientCommandesScreenState
     // ← Client vérifie et confirme
 
      case 'VERIFICATION_FINALE':
-        return Column(
-          children: [
+  return Column(
+    children: [
 
-            // ← Voir photos
-            GestureDetector(
-              onTap: () => _showPreuvesDialog(
-                cmd['id'] as int),
-              child: Container(
-                margin: const EdgeInsets
-                  .only(bottom: 10),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius:
-                    BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment:
-                    MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.photo_library_outlined,
-                      color: AppColors.primary,
-                      size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      "📸 Voir et comparer les photos",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+      // ← AJOUT : Récapitulatif commande
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.border,
+            width: 0.5)),
+        child: Column(
+          crossAxisAlignment:
+            CrossAxisAlignment.start,
+          children: [
+            Text("📋 Récapitulatif commande",
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
+            const Divider(height: 16),
 
-            // ← Info
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.amberLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
+            // ← Articles déposés
+            if (cmd['descriptionColis'] != null &&
+                cmd['descriptionColis']
+                  .toString().isNotEmpty) ...[
+              Row(
+                crossAxisAlignment:
+                  CrossAxisAlignment.start,
                 children: [
                   const Icon(
-                    Icons.info_outline,
-                    color: AppColors.amber,
-                    size: 16),
-                  const SizedBox(width: 8),
+                    Icons.list_alt_outlined,
+                    color: AppColors.primary,
+                    size: 14),
+                  const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      "Vérifiez vos articles reçus "
-                      "avant de confirmer.",
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: AppColors.amber,
-                      ),
+                    child: Column(
+                      crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                      children: [
+                        Text("Articles déposés :",
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecond,
+                          ),
+                        ),
+                        Text(
+                          cmd['descriptionColis'],
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: AppColors.primary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
+            ],
 
-            // ← Boutons OK ou Litige
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      side: const BorderSide(
-                        color: Colors.orange),
-                      padding: const EdgeInsets
-                        .symmetric(vertical: 12)),
-                    onPressed: () =>
-                      _showLitigeDialog(id),
-                    icon: const Icon(
-                      Icons.warning_amber, size: 16),
-                    label: Text("⚠️ Signaler",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+            // ← Prestations
+            if (cmd['lignes'] != null &&
+                (cmd['lignes'] as List)
+                  .isNotEmpty) ...[
+              Text("Prestations :",
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecond,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ...(cmd['lignes'] as List)
+                .map((ligne) =>
+                  Padding(
+                    padding: const EdgeInsets
+                      .only(bottom: 4),
+                    child: Row(
+                      mainAxisAlignment:
+                        MainAxisAlignment
+                          .spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppColors.green,
+                              size: 12),
+                            const SizedBox(width: 6),
+                            Text(
+                              "${ligne['typePrestation']}"
+                              " × ${(ligne['quantite'] as double).toInt()}",
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: AppColors
+                                  .textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          "${((ligne['montantLigne'] ?? 0)).toInt()} FCFA",
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.green,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets
-                        .symmetric(vertical: 12)),
-                    onPressed: () =>
-                      _confirmerReception(id),
-                    icon: const Icon(
-                      Icons.check_circle_outline,
-                      size: 16),
-                    label: Text(
-                      "✅ Tout est bon !",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+            ],
+
+            // ← Prix réel
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.greenLight,
+                borderRadius:
+                  BorderRadius.circular(8)),
+              child: Column(
+                children: [
+                  if (cmd['prixParTypePrestations']
+                      != null &&
+                      (cmd['prixParTypePrestations']
+                        as num) > 0)
+                    _prixRow(
+                      "Prestations",
+                      (cmd['prixParTypePrestations']
+                        as num).toInt()),
+                  if (cmd['prixCourseCollecte']
+                      != null &&
+                      (cmd['prixCourseCollecte']
+                        as num) > 0)
+                    _prixRow(
+                      "Frais collecte",
+                      (cmd['prixCourseCollecte']
+                        as num).toInt()),
+                  if (cmd['prixCourseLivraison']
+                      != null &&
+                      (cmd['prixCourseLivraison']
+                        as num) > 0)
+                    _prixRow(
+                      "Frais livraison",
+                      (cmd['prixCourseLivraison']
+                        as num).toInt()),
+                  const Divider(height: 12),
+                  Row(
+                    mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("TOTAL PAYÉ",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.green,
+                        ),
+                      ),
+                      Text(
+                        "${(cmd['montantTotal'] ?? 0).toInt()} FCFA ✅",
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.green,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
-        );
+        ),
+      ),
 
-      
+      // ← Photos
+      GestureDetector(
+        onTap: () => _showPreuvesDialog(id),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment:
+              MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.primary,
+                size: 16),
+              const SizedBox(width: 8),
+              Text(
+                "📸 Voir et comparer les photos",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // ← Info vérification
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.amberLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              color: AppColors.amber,
+              size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Vérifiez bien que tous vos "
+                "articles sont présents et en "
+                "bon état avant de confirmer !",
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AppColors.amber,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // ← Boutons OK ou Litige
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(
+                  color: Colors.orange),
+                padding: const EdgeInsets
+                  .symmetric(vertical: 12)),
+              onPressed: () =>
+                _showLitigeDialog(id),
+              icon: const Icon(
+                Icons.warning_amber, size: 16),
+              label: Text("⚠️ Signaler",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets
+                  .symmetric(vertical: 12)),
+              onPressed: () =>
+                _confirmerReception(id),
+              icon: const Icon(
+                Icons.check_circle_outline,
+                size: 16),
+              label: Text(
+                "✅ Tout est bon !",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 
       case 'CLOTUREE':
         return Container(
@@ -1237,6 +1428,32 @@ class _ClientCommandesScreenState
     }
   }
 
+  // ← Helper ligne prix
+  Widget _prixRow(String label, int montant) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AppColors.textSecond,
+            ),
+          ),
+          Text("$montant FCFA",
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AppColors.green,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _accepterPrix(
     int commandeId, String decision) async {
   try {
@@ -1261,9 +1478,9 @@ class _ClientCommandesScreenState
             SnackBar(
               content: Text(
                 decision == 'ACCEPTER'
-                  ? "✅ Prix accepté ! "
+                  ? " Prix accepté ! "
                     "Traitement en cours."
-                  : "❌ Prix refusé. "
+                  : " Prix refusé. "
                     "Un litige a été ouvert.",
                 style: GoogleFonts.poppins(
                   fontSize: 12)),
@@ -1304,7 +1521,7 @@ class _ClientCommandesScreenState
 
       case 'EN_COLLECTE':
         return {
-          'label': '🛵 Collecte',
+          'label': ' Collecte',
           'color': AppColors.primary,
           'bgColor': AppColors.primaryLight,
           'borderColor': AppColors.primary
@@ -1332,7 +1549,7 @@ class _ClientCommandesScreenState
 
       case 'TRAITEMENT_TERMINE':
         return {
-          'label': '💰 À payer',
+          'label': ' À payer',
           'color': AppColors.primary,
           'bgColor': AppColors.primaryLight,
           'borderColor': AppColors.primary
@@ -1341,7 +1558,7 @@ class _ClientCommandesScreenState
       
       case 'EN_LIVRAISON':
         return {
-          'label': '🚚 Livraison',
+          'label': ' Livraison',
           'color': AppColors.primary,
           'bgColor': AppColors.primaryLight,
           'borderColor': AppColors.primary
@@ -1688,7 +1905,7 @@ void _showPaiementDialog(
                 ),
                 const SizedBox(height: 16),
 
-                Text("💰 Effectuer le paiement",
+                Text(" Effectuer le paiement",
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1766,7 +1983,7 @@ void _showPaiementDialog(
                 // Wave/Orange → capture écran
                 if (modePaiement != 'ESPECES') ...[
                   Text(
-                    "📸 Capture d'écran du reçu",
+                    " Capture d'écran du reçu",
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1910,24 +2127,32 @@ void _showPaiementDialog(
                         final userId =
                           await AuthStorage.getUserId();
 
-                        final uri = Uri.parse(
-                          '${ApiConstants.baseUrl}'
-                          '/paiement/commande'
-                          '/$commandeId'
-                          '?montant=$montant'
-                          '&modePaiement=$modePaiement'
-                          '${referenceController.text.isNotEmpty ? "&reference=${referenceController.text}" : ""}'
-                          '${captureBase64 != null ? "&captureBase64=$captureBase64" : ""}');
-
+                        // ← FIX : captureBase64 dans body !
                         final response = await http.post(
-                          uri,
+                          Uri.parse(
+                            '${ApiConstants.baseUrl}'
+                            '/paiement/commande'
+                            '/$commandeId'
+                            '?montant=$montant'
+                            '&modePaiement=$modePaiement'
+                            '&acteurId=$userId'
+                            '${referenceController.text.isNotEmpty
+                              ? "&reference=${referenceController.text}"
+                              : ""}'),
                           headers: {
-                            'Authorization':
-                              'Bearer $token'},
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json',
+                          },
+                          // ← Photo dans body
+                          body: jsonEncode({
+                            'captureBase64': captureBase64 ?? '',
+                          }),
                         );
 
                         if (response.statusCode == 200) {
+                          // ← Fermer dialog
                           Navigator.pop(ctx);
+                          // ← Recharger commandes
                           _loadCommandes();
                           if (mounted) {
                             ScaffoldMessenger.of(context)
@@ -1939,8 +2164,23 @@ void _showPaiementDialog(
                                     "du prestataire.",
                                     style: GoogleFonts.poppins(
                                       fontSize: 12)),
-                                  backgroundColor:
-                                    AppColors.green,
+                                  backgroundColor: AppColors.green,
+                                  behavior:
+                                    SnackBarBehavior.floating,
+                                ),
+                              );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context)
+                              .showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "❌ Erreur paiement : "
+                                    "${response.statusCode}",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12)),
+                                  backgroundColor: Colors.red,
                                   behavior:
                                     SnackBarBehavior.floating,
                                 ),

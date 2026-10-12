@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -50,7 +52,7 @@ class CommandeModel {
     this.telephoneAgentCollecte,
     this.nomAgentLivraison,
   });
-
+  
   factory CommandeModel.fromJson(
       Map<String, dynamic> json) {
     return CommandeModel(
@@ -109,6 +111,8 @@ class _PrestataireCommandesScreenState
   bool _isLoading = true;
   List<CommandeModel> _commandes = [];
   String _filterStatut = 'TOUS';
+  //Timer? _refreshTimer;
+
 
   final List<Map<String, String>> _filtres = [
   {'key': 'TOUS',               'label': 'Toutes'},
@@ -128,14 +132,26 @@ class _PrestataireCommandesScreenState
   {'key': 'LITIGE',             'label': '⚠️ Litiges'},
 ];
 
+  
+
   @override
   void initState() {
     super.initState();
     _loadCommandes();
+  //    _refreshTimer = Timer.periodic(
+  //   const Duration(seconds: 15),
+  //   (_) => _loadCommandes(silent: true),
+  // );
   }
 
+  @override
+  void dispose() {
+ // _refreshTimer?.cancel();
+  super.dispose();
+}
+
   // ── Charger les commandes ─────────────────────────
-  Future<void> _loadCommandes() async {
+  Future<void> _loadCommandes({bool silent = false}) async {
     setState(() => _isLoading = true);
     try {
       final token  = await AuthStorage.getToken();
@@ -948,22 +964,62 @@ class _PrestataireCommandesScreenState
 
     // ← MODIFICATION : CLOTUREE directement !
     case 'VERIFICATION_FINALE':
-      return SizedBox(
+  return Column(
+    children: [
+      // ← Info
+      Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.amberLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              color: AppColors.amber,
+              size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "En attente confirmation client. "
+                "Vous pouvez aussi clôturer.",
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AppColors.amber,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 8),
+      // ← Prestataire peut aussi clôturer !
+      SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
+        child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.green,
             foregroundColor: Colors.white,
-          ),
-          onPressed: () => _changerStatut(
-            cmd.id, 'CLOTUREE'),
-          child: Text(
-            "🎉 Clôturer la commande",
+            padding: const EdgeInsets.symmetric(
+              vertical: 12)),
+          onPressed: () => _showConfirmDialog(
+            "Clôturer la commande ?",
+            "Le client n'a pas encore confirmé. "
+            "Voulez-vous clôturer quand même ?",
+            () => _changerStatut(
+              cmd.id, 'CLOTUREE')),
+          icon: const Icon(
+            Icons.lock_outline, size: 16),
+          label: Text(
+            "!! Clôturer la commande !!!",
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600)),
         ),
-      );
+      ),
+    ],
+  );
 
     // ← SUPPRIMÉ : TERMINEE
     // ← SUPPRIMÉ : PAIEMENT_RECU
@@ -985,7 +1041,7 @@ class _PrestataireCommandesScreenState
               size: 16),
             const SizedBox(width: 8),
             Text(
-              "🎉 Commande clôturée !",
+              "!!! Commande clôturée !",
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 color: AppColors.green,
@@ -1258,7 +1314,7 @@ Widget _inputPrix(
 Future<void> _confirmerPaiement(
     int commandeId) async {
   try {
-    final token  = await AuthStorage.getToken();
+    final token = await AuthStorage.getToken();
 
     // ← Récupérer paiement
     final paiementResp = await http.get(
@@ -1274,7 +1330,7 @@ Future<void> _confirmerPaiement(
         jsonDecode(paiementResp.body);
       final paiementId = paiement['id'];
 
-      // ← Confirmer
+      // ← Confirmer paiement
       final response = await http.put(
         Uri.parse(
           '${ApiConstants.baseUrl}/paiement'
@@ -1290,15 +1346,17 @@ Future<void> _confirmerPaiement(
             .showSnackBar(
               SnackBar(
                 content: Text(
-                  "✅ Paiement confirmé ! "
-                  "Assignez un agent de livraison.",
+                  "✅ Paiement confirmé !",
                   style: GoogleFonts.poppins(
                     fontSize: 12)),
                 backgroundColor: AppColors.green,
-                behavior:
-                  SnackBarBehavior.floating,
+                behavior: SnackBarBehavior.floating,
               ),
             );
+
+          // ← AJOUT : Dialog assigner agent livraison
+          //await _showAssignerAgentLivraison(commandeId);
+          _showChoixLivraisonDialog(commandeId);
         }
       }
     }
@@ -1674,6 +1732,226 @@ Future<void> _confirmerPaiement(
   );
 }
 
+Future<void> _showAssignerAgentLivraison(
+    int commandeId) async {
+
+  final token = await AuthStorage.getToken();
+  final agentsResp = await http.get(
+    Uri.parse(
+      '${ApiConstants.baseUrl}/agent/disponibles'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+
+  if (!mounted) return;
+
+  final agents = agentsResp.statusCode == 200
+    ? jsonDecode(agentsResp.body) as List
+    : [];
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(20))),
+    builder: (_) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.circular(2)),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment:
+              CrossAxisAlignment.start,
+            children: [
+              Text(
+                "🛵 Assigner agent livraison",
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                "Choisissez l'agent qui va "
+                "livrer la commande",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.textSecond,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const Divider(height: 1),
+
+        agents.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.people_outline,
+                    size: 40,
+                    color: AppColors.textMuted),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Aucun agent disponible",
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppColors.textSecond,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // ← Passer EN_LIVRAISON sans agent
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.green,
+                      foregroundColor: Colors.white),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _changerStatut(
+                        commandeId, 'EN_LIVRAISON');
+                    },
+                    child: Text(
+                      "Continuer sans agent",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12)),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              shrinkWrap: true,
+              itemCount: agents.length,
+              itemBuilder: (_, i) {
+                final agent = agents[i];
+                final initiales =
+                  '${agent['prenom']?[0] ?? ''}'
+                  '${agent['nom']?[0] ?? ''}'
+                  .toUpperCase();
+
+                return ListTile(
+                  leading: Container(
+                    width: 42, height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius:
+                        BorderRadius.circular(12)),
+                    child: Center(
+                      child: Text(initiales,
+                        style: GoogleFonts.poppins(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    '${agent['prenom']} '
+                    '${agent['nom']}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    agent['telephone'] ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppColors.textSecond,
+                    ),
+                  ),
+                  trailing: Container(
+                    padding:
+                      const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius:
+                        BorderRadius.circular(20)),
+                    child: Text("✅ Disponible",
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final token =
+                        await AuthStorage.getToken();
+                      final userId =
+                        await AuthStorage.getUserId();
+
+                      // ← ÉTAPE 1 : Assigner agent
+                      await http.put(
+                        Uri.parse(
+                          '${ApiConstants.commandes}'
+                          '/$commandeId/assigner-agent'
+                          '?agentId=${agent['id']}'
+                          '&typeAffectation=LIVRAISON'),
+                        headers: {
+                          'Authorization':
+                            'Bearer $token'},
+                      );
+
+                      // ← ÉTAPE 2 : EN_LIVRAISON
+                      await http.put(
+                        Uri.parse(
+                          '${ApiConstants.commandes}'
+                          '/$commandeId/statut'
+                          '?statut=EN_LIVRAISON'
+                          '&acteurId=$userId'),
+                        headers: {
+                          'Authorization':
+                            'Bearer $token'},
+                      );
+
+                      _loadCommandes();
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context)
+                          .showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "🛵 ${agent['prenom']} "
+                                "assigné pour la livraison !",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12)),
+                              backgroundColor:
+                                AppColors.primary,
+                              behavior:
+                                SnackBarBehavior.floating,
+                            ),
+                          );
+                      }
+                    } catch (e) {
+                      debugPrint("Erreur: $e");
+                    }
+                  },
+                );
+              },
+            ),
+
+        const SizedBox(height: 20),
+      ],
+    ),
+  );
+}
+
 // ← AJOUT : Signaler problème → LITIGE
 void _showSignalerProbleme(int commandeId) {
   final commentaireController =
@@ -1784,6 +2062,141 @@ void _showSignalerProbleme(int commandeId) {
               fontSize: 13,
               fontWeight: FontWeight.w600)),
         ),
+      ],
+    ),
+  );
+}
+
+void _showChoixLivraisonDialog( int commandeId) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(20))),
+    isDismissible: false,
+    builder: (_) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.circular(2)),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment:
+              CrossAxisAlignment.start,
+            children: [
+              Text(
+                "💰 Paiement confirmé !",
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.green,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Comment le client récupère "
+                "sa commande ?",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: AppColors.textSecond,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const Divider(height: 1),
+        const SizedBox(height: 10),
+
+        // ← Option 1 : Client vient récupérer
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(
+                  color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14)),
+              onPressed: () async {
+                Navigator.pop(context);
+                // ← Pas de livraison
+                // → VERIFICATION_FINALE directement
+                await _changerStatut(
+                  commandeId,
+                  'VERIFICATION_FINALE');
+                if (mounted) {
+                  ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "✅ Client vient récupérer. "
+                          "En attente de sa confirmation.",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12)),
+                        backgroundColor:
+                          AppColors.primary,
+                        behavior:
+                          SnackBarBehavior.floating,
+                      ),
+                    );
+                }
+              },
+              icon: const Icon(
+                Icons.store_outlined, size: 18),
+              label: Text(
+                "🏪 Client vient récupérer",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // ← Option 2 : Livraison à domicile
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14)),
+              onPressed: () {
+                Navigator.pop(context);
+                // ← Assigner agent livraison
+                _showAssignerAgentLivraison(
+                  commandeId);
+              },
+              icon: const Icon(
+                Icons.delivery_dining, size: 18),
+              label: Text(
+                "🛵 Livraison à domicile",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
       ],
     ),
   );

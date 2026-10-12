@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:memoireserviprox/core/services/notification_service.dart';
 import 'package:memoireserviprox/features/agent/AgentHomeScreen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
@@ -133,6 +134,8 @@ class _OtpScreenState extends State<OtpScreen> {
         await AuthStorage.saveAdresse(
           data['adresse'] ?? '');
 
+        await NotificationService.saveFcmTokenAfterLogin();  
+
         // Dans _verifier() après récupération token
         if (mounted) {
           Navigator.pushAndRemoveUntil(
@@ -142,6 +145,9 @@ class _OtpScreenState extends State<OtpScreen> {
                 switch (data['role']) {
                   case 'PRESTATAIRE':
                     return const PrestataireHomeScreen();
+                   // AGENT
+                  case 'AGENT':
+                    return const AgentHomeScreen();  
                   // AJOUT
                   case 'LIVREUR':
                     return const AgentHomeScreen();

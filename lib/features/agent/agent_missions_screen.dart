@@ -23,15 +23,27 @@ class _AgentMissionsScreenState
   List<dynamic> _missions = [];
   List<dynamic> _missionsEnAttente = [];
   final Map<int, bool> _photosPrises = {};
+  //Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadMissions();
+  //   _refreshTimer = Timer.periodic(
+  //   const Duration(seconds: 15),
+  //   (_) => _loadMissions(silent:true),
+  // );
   }
 
+  @override
+  void dispose() {
+ // _refreshTimer?.cancel();
+  super.dispose();
+}
+
   // ── Charger missions ──────────────────────────────
-  Future<void> _loadMissions() async {
+  Future<void> _loadMissions({
+    bool silent = false}) async {
     setState(() => _isLoading = true);
     try {
       final token  = await AuthStorage.getToken();
@@ -101,8 +113,8 @@ class _AgentMissionsScreenState
               SnackBar(
                 content: Text(
                   decision == 'CONFIRMER'
-                    ? "✅ Mission acceptée !"
-                    : "❌ Mission refusée",
+                    ? " Mission acceptée !"
+                    : " Mission refusée",
                   style: GoogleFonts.poppins(
                     fontSize: 12)),
                 backgroundColor:
@@ -543,22 +555,22 @@ Future<void> _confirmerLivraison(
       case 'CONFIRMEE':
         statutColor = AppColors.green;
         statutBg = AppColors.greenLight;
-        statutLabel = "✅ Confirmée";
+        statutLabel = " Confirmée";
         break;
       case 'EN_COURS':
         statutColor = AppColors.primary;
         statutBg = AppColors.primaryLight;
-        statutLabel = "🔄 En cours";
+        statutLabel = " En cours";
         break;
       case 'TERMINEE':
         statutColor = AppColors.green;
         statutBg = AppColors.greenLight;
-        statutLabel = "🏁 Terminée";
+        statutLabel = " Terminée";
         break;
       case 'REFUSEE':
         statutColor = Colors.red;
         statutBg = const Color(0xFFFCEBEB);
-        statutLabel = "❌ Refusée";
+        statutLabel = " Refusée";
         break;
       default:
         statutColor = Colors.grey;

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "879591651485",
+    "project_id": "serviprox-fa9bb",
+    "storage_bucket": "serviprox-fa9bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879591651485:android:5cf1d8944e530afd6f7c74",
+        "android_client_info": {
+          "package_name": "com.example.memoireserviprox"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCATXcq8G7CcJF-4VZAPpMlzvff5DFOQ5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
