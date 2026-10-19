@@ -37,6 +37,8 @@ class _PrestataireHomeScreenState
   int _countAgents = 0;
   bool _isLoading = true;
   int? _prestataireId;
+  String _typeService = '';  // ← AJOUT
+  bool _avecAgent = true; // ← AJOUT
 
   // Variables config récapitulatif
   bool _configExiste = false;
@@ -57,6 +59,17 @@ class _PrestataireHomeScreenState
       .map((w) => w[0].toUpperCase())
       .join();
   }
+
+  String get _labelService {
+  switch (_typeService.toLowerCase()) {
+    case 'pressing':   return 'Pressing · Actif';
+    case 'reparation': return 'Réparation · Actif';
+    case 'domicile':   return 'Domicile · Actif';
+    default: return _typeService.isNotEmpty
+      ? '$_typeService · Actif' : 'En activité';
+  }
+}
+
 
   @override
   void initState() {
@@ -176,6 +189,9 @@ Future<void> _loadConfig(
           _zoneConfig =
             data['zoneCouverture'] ?? '';
           _zone = _zoneConfig;
+          _typeService       = data['typeService'] ?? '';          // ← déjà prévu
+          _avecAgent         = data['avecAgent'] as bool? ??       // ← AJOUT
+      (data['service'] as Map<String, dynamic>?)?['avecAgent'] as bool? ?? true;
         });
       }
     }
@@ -268,7 +284,7 @@ Future<void> _loadCompteurs(
         children: [
           _buildAccueil(),
           const PrestataireCommandesScreen(),
-          const PrestataireAgentsScreen(), 
+          if(_avecAgent)   const PrestataireAgentsScreen(), 
           _buildProfil(),
         ],
       ),
@@ -276,9 +292,10 @@ Future<void> _loadCompteurs(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) =>
             setState(() => _currentIndex = i),
+            
         backgroundColor: Colors.white,
         indicatorColor: AppColors.greenLight,
-        destinations: const [
+        destinations:  [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(
@@ -291,6 +308,9 @@ Future<void> _loadCompteurs(
               Icons.list_alt, color: AppColors.green),
             label: 'Commandes',
           ),
+
+           if (_avecAgent) 
+
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(
@@ -727,26 +747,13 @@ Widget _drawerItem({
               // ── Compteurs ──────────────────────
               Row(
                 children: [
-                  Expanded(child: _buildStatCard(
-                    '$_countCommandes',
-                    'Commandes',
-                    AppColors.green,
-                    AppColors.greenLight,
-                  )),
+                  Expanded(child: _buildStatCard('$_countCommandes','Commandes', AppColors.green, AppColors.greenLight,)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildStatCard(
-                    '$_countEnCours',
-                    'En cours',
-                    AppColors.amber,
-                    AppColors.amberLight,
-                  )),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildStatCard(
-                    '$_countAgents',
-                    'Agents',
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                  )),
+                  Expanded(child: _buildStatCard('$_countEnCours','En cours',AppColors.amber, AppColors.amberLight, )),
+                  if (_avecAgent) ...[
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildStatCard( '$_countAgents', 'Agents', AppColors.primary, AppColors.primaryLight )),
+                  ],
                 ],
               ),
 
@@ -921,79 +928,69 @@ Widget _drawerItem({
                           // ← Prestations en chips
                           if (_configExiste &&
                               _prestationsConfig.isNotEmpty)
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                                children: [
-                                  Wrap(
-                                    spacing: 4,
-                                    runSpacing: 4,
-                                    children: _prestationsConfig
-                                      .take(7)
-                                      .map((presta) =>
-                                        Container(
-                                          padding:
-                                            const EdgeInsets
-                                              .symmetric(
-                                                horizontal: 6,
-                                                vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors
-                                              .greenLight,
-                                            borderRadius:
-                                              BorderRadius
-                                                .circular(20),
-                                          ),
-                                          child: Text(
-                                            "${presta['nom']}"
-                                            " · ${(presta['prix']
-                                              as num).toInt()}F",
-                                            style:
-                                              GoogleFonts.poppins(
-                                                fontSize: 9,
-                                                color:
-                                                  AppColors.green,
-                                                fontWeight:
-                                                  FontWeight.w500,
-                                              ),
-                                          ),
-                                        ),
-                                      ).toList(),
-                                  ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                  children: [
 
-                                  if (_prestationsConfig.length > 7)
-                                    Padding(
-                                      padding: const EdgeInsets
-                                        .only(top: 3),
-                                      child: Text(
-                                        "+${_prestationsConfig.length - 7} autres",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 9,
-                                          color: AppColors.textSecond,
-                                          fontStyle: FontStyle.italic,
+                                    // ← Chips scrollables verticalement
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        child: Wrap(
+                                          spacing: 4,
+                                          runSpacing: 4,
+                                          children: _prestationsConfig
+                                            .map((presta) =>
+                                              Container(
+                                                padding:
+                                                  const EdgeInsets
+                                                    .symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors
+                                                    .greenLight,
+                                                  borderRadius:
+                                                    BorderRadius
+                                                      .circular(20),
+                                                ),
+                                                child: Text(
+                                                  "${presta['nom']}"
+                                                  " · ${(presta['prix']
+                                                    as num).toInt()}F",
+                                                  style:
+                                                    GoogleFonts.poppins(
+                                                      fontSize: 9,
+                                                      color:
+                                                        AppColors.green,
+                                                      fontWeight:
+                                                        FontWeight.w500,
+                                                    ),
+                                                ),
+                                              ),
+                                            ).toList(),
                                         ),
                                       ),
                                     ),
 
-                                  const Spacer(),
-
-                                  // ← Options en bas
-                                  Wrap(
-                                    spacing: 3,
-                                    runSpacing: 3,
-                                    children: [
-                                      if (_options['express'] == true)
-                                        _chip("⚡", AppColors.amber),
-                                      if (_options['collecte'] == true)
-                                        _chip("🏠", AppColors.primary),
-                                      if (_options['livraison'] == true)
-                                        _chip("🚚", AppColors.primary),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            )
+                                    // ← Options en bas (hors scroll)
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 3,
+                                      runSpacing: 3,
+                                      children: [
+                                        if (_options['express'] == true)
+                                          _chip("⚡", AppColors.amber),
+                                        if (_options['collecte'] == true)
+                                          _chip("🏠", AppColors.primary),
+                                        if (_options['livraison'] == true)
+                                          _chip("🚚", AppColors.primary),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              )
                           else
                             Expanded(
                               child: Text(
@@ -1053,24 +1050,25 @@ Widget _drawerItem({
                               MainAxisAlignment
                                 .spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 38, height: 38,
-                                    decoration: BoxDecoration(
-                                      color:
-                                        AppColors.amberLight,
-                                      borderRadius:
-                                        BorderRadius
-                                          .circular(10)),
-                                    child: const Icon(
-                                      Icons
-                                        .location_on_outlined,
-                                      color: AppColors.amber,
-                                      size: 20),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text("Ma zone",
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32, height: 32,
+                                      decoration: BoxDecoration(
+                                        color:
+                                          AppColors.amberLight,
+                                        borderRadius:
+                                          BorderRadius
+                                            .circular(10)),
+                                      child: const Icon(
+                                        Icons
+                                          .location_on_outlined,
+                                        color: AppColors.amber,
+                                        size: 18),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text("Ma zone",
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight:
@@ -1080,6 +1078,7 @@ Widget _drawerItem({
                                     ),
                                   ),
                                 ],
+                              ),
                               ),
                               // ← Badge zone
                               Container(
@@ -1110,38 +1109,45 @@ Widget _drawerItem({
                           ),
 
                           // ← Contenu zone
+                          // ← Contenu zone (scrollable)
                           if (_zoneConfig.isNotEmpty) ...[
                             const SizedBox(height: 8),
                             const Divider(height: 1),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on_rounded,
-                                  color: AppColors.amber,
-                                  size: 14),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    _zoneConfig,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Row(
+                                  crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_rounded,
+                                      color: AppColors.amber,
+                                      size: 14),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        _zoneConfig,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ] else ...[
                             const SizedBox(height: 8),
-                            Text(
-                              "Définissez votre zone",
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: AppColors.textSecond,
+                            Expanded(
+                              child: Text(
+                                "Définissez votre zone",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  color: AppColors.textSecond,
+                                ),
                               ),
                             ),
                           ],
@@ -1474,8 +1480,8 @@ Widget _chip(String emoji, Color color) {
               Icons.location_on_outlined,
               "Zone", _zone),
             _buildProfilItem(
-              Icons.work_outline,
-              "Type de service", "Pressing"),
+              //Icons.work_outline,"Type de service", "Pressing"),
+              Icons.work_outline, "Type de service",_typeService.isNotEmpty ? _typeService : 'Non configuré'),
 
             const SizedBox(height: 24),
 

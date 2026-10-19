@@ -6,9 +6,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../core/constants/api_constants.dart';
 import '../../core/services/auth_storage.dart';
 import '../home/home_screen.dart';
 
@@ -131,6 +128,25 @@ class _RegisterPrestataireScreenState
   bool _obscurePassword  = true;  // mot de passe masqué ?
   bool _obscureConfirm   = true;  // confirmation masquée ?
   bool _isLoading        = false; // formulaire en cours d'envoi ?
+  String _selectedIndicatif  = '+221';
+  String _selectedFlag       = '🇸🇳';
+
+  final List<Map<String, String>> _indicatifs = [
+    {'flag': '🇸🇳', 'code': '+221', 'pays': 'Sénégal'},
+    {'flag': '🇫🇷', 'code': '+33',  'pays': 'France'},
+    {'flag': '🇲🇦', 'code': '+212', 'pays': 'Maroc'},
+    {'flag': '🇨🇮', 'code': '+225', 'pays': "Côte d'Ivoire"},
+    {'flag': '🇲🇱', 'code': '+223', 'pays': 'Mali'},
+    {'flag': '🇬🇳', 'code': '+224', 'pays': 'Guinée'},
+    {'flag': '🇧🇫', 'code': '+226', 'pays': 'Burkina Faso'},
+    {'flag': '🇹🇬', 'code': '+228', 'pays': 'Togo'},
+    {'flag': '🇧🇯', 'code': '+229', 'pays': 'Bénin'},
+    {'flag': '🇳🇪', 'code': '+227', 'pays': 'Niger'},
+    {'flag': '🇬🇧', 'code': '+44',  'pays': 'Royaume-Uni'},
+    {'flag': '🇺🇸', 'code': '+1',   'pays': 'États-Unis'},
+  ];
+
+
   bool _isLoadingServices = true; // services en cours de chargement ?
 
   // String = chaîne de caractères
@@ -150,6 +166,7 @@ class _RegisterPrestataireScreenState
   // Chargé depuis l'API → vide au départ
   List<Map<String, String>> _services = [];
 
+  
   // ══════════════════════════════════════════════════════
   // CYCLE DE VIE DU WIDGET (Lifecycle)
   // ══════════════════════════════════════════════════════
@@ -276,6 +293,59 @@ class _RegisterPrestataireScreenState
       _selectedService = 'pressing';
       _isLoadingServices = false;
     });
+  }
+
+  void _showIndicatifDialog() {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text("Choisir l'indicatif",
+            style: GoogleFonts.poppins(
+              fontSize: 15, fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        ...(_indicatifs.map((item) =>
+          ListTile(
+            leading: Text(item['flag']!, style: const TextStyle(fontSize: 24)),
+            title: Text(item['pays']!,
+              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textPrimary)),
+            trailing: Text(item['code']!,
+              style: GoogleFonts.poppins(
+                fontSize: 13, fontWeight: FontWeight.w600,
+                color: AppColors.green)),          // ← vert prestataire
+            selected: _selectedIndicatif == item['code'],
+            selectedTileColor: AppColors.greenLight, // ← vert prestataire
+            onTap: () {
+              setState(() {
+                _selectedIndicatif = item['code']!;
+                _selectedFlag      = item['flag']!;
+              });
+              Navigator.pop(context);
+            },
+          ),
+        )).toList(),
+        const SizedBox(height: 20),
+      ],
+    ),
+  );
   }
 
   // ── _checkPasswordStrength() ───────────────────────────
@@ -433,7 +503,7 @@ class _RegisterPrestataireScreenState
           'prenom':        _prenomCtrl.text.trim(),
           'nomCommercial': _nomCommercialCtrl.text.trim(),
           'email':         _emailCtrl.text.trim(),
-          'telephone':     _phoneCtrl.text.trim(),
+          'telephone':   '$_selectedIndicatif${_phoneCtrl.text.trim().replaceAll(' ', '')}',
           'zoneCouverture':_zoneCtrl.text.trim(),
           'typeService':   _selectedService,
           'motDePasse':    _passwordCtrl.text,
@@ -790,13 +860,75 @@ class _RegisterPrestataireScreenState
                       ),
 
                       // ── Téléphone ─────────────────────
-                      _buildFloatField(
-                        label: "Téléphone",
-                        hint: "+221 77 000 00 00",
-                        icon: Icons.phone_outlined,
-                        controller: _phoneCtrl,
-                        validator: _validatePhone,
-                        keyboardType: TextInputType.phone,
+                      // _buildFloatField(
+                      //   label: "Téléphone",
+                      //   hint: "+221 77 000 00 00",
+                      //   icon: Icons.phone_outlined,
+                      //   controller: _phoneCtrl,
+                      //   validator: _validatePhone,
+                      //   keyboardType: TextInputType.phone,
+                      // ),
+
+                      // ── Téléphone avec indicatif ──────────
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: _showIndicatifDialog,
+                              child: Container(
+                                height: 56,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(_selectedFlag, style: const TextStyle(fontSize: 20)),
+                                    const SizedBox(width: 4),
+                                    Text(_selectedIndicatif,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13, fontWeight: FontWeight.w500,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const Icon(Icons.keyboard_arrow_down,
+                                      color: AppColors.textSecond, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _phoneCtrl,
+                                keyboardType: TextInputType.phone,
+                                decoration: InputDecoration(
+                                  labelText: "Numéro téléphone",
+                                  labelStyle: GoogleFonts.poppins(
+                                    fontSize: 13, color: AppColors.textSecond),
+                                  floatingLabelStyle: GoogleFonts.poppins(
+                                    fontSize: 12, color: AppColors.green,  // ← vert
+                                    fontWeight: FontWeight.w500),
+                                  hintText: "77 000 00 00",
+                                  hintStyle: GoogleFonts.poppins(
+                                    fontSize: 13, color: AppColors.textMuted),
+                                  prefixIcon: const Icon(
+                                    Icons.phone_outlined, color: AppColors.green),  // ← vert
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) return "Téléphone requis";
+                                  final clean = value.replaceAll(' ', '').replaceAll('-', '');
+                                  if (!RegExp(r'^[0-9]{7,12}$').hasMatch(clean)) {
+                                    return "Numéro invalide (ex: 77 000 00 00)";
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                       // ── Type de service DYNAMIQUE ─────

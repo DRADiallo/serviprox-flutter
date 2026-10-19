@@ -460,7 +460,7 @@ class _HomeContentState extends State<_HomeContent> {
           else if (type.contains('reparation') ||
                    type.contains('réparation'))
             reparation++;
-          else if (type.contains('soins')) soins++;
+          else if (type.contains('soins') || type.contains('domicile')) soins++;
         }
 
         if (mounted) {
@@ -593,7 +593,7 @@ class _HomeContentState extends State<_HomeContent> {
         'count': '$_countReparation techniciens',
         'screen': const ReparationScreen(),
       };
-    } else if (t.contains('soins')) {
+    } else if (t.contains('soins') || t.contains('domicile')) {
       return {
         'color': AppColors.purple,      // Violet
         'lightColor': AppColors.purpleLight,

@@ -646,6 +646,7 @@ class _ClientCommandesScreenState
                 ],
 
                 // Total + mode dépôt
+                if (cmd['avecAgent'] == true)
                 Row(
                   mainAxisAlignment:
                     MainAxisAlignment.spaceBetween,
@@ -678,10 +679,17 @@ class _ClientCommandesScreenState
                       ),
                     ),
                   ],
-                ),
+                )
+                else
+                   Align(
+                      alignment: Alignment.centerRight,
+                      child: Text("${(cmd['montantTotal'] ?? 0).toInt()} FCFA",
+                        style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.green)),
+                    ),
 
                 // ── Agent info ───────────────────
-                if (cmd['nomAgentCollecte'] != null)
+               // if (cmd['nomAgentCollecte'] != null)
+                if(cmd['avecAgent'] == true && cmd['nomAgentCollecte'] != null)
                   ...[
                     const SizedBox(height: 8),
                     Container(
@@ -964,32 +972,32 @@ class _ClientCommandesScreenState
         );  
 
       case 'EN_TRAITEMENT':
+        final isAvecAgent = cmd['avecAgent'] == true;
+
         return Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.amberLight,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment:
-              MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.local_laundry_service,
-                color: AppColors.amber,
-                size: 14),
-              const SizedBox(width: 6),
-              Text(
-                "Vos articles sont en cours "
-                "de traitement",
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppColors.amber,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.amberLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isAvecAgent ? Icons.local_laundry_service : Icons.handyman_outlined,
+                  color: AppColors.amber, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    isAvecAgent
+                      ? "Vos articles sont en cours de traitement"
+                      : "Votre demande est en cours de traitement",
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppColors.amber),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
 
       
 
@@ -2259,14 +2267,12 @@ Widget _modeBtn(
 
 String _getLabelType(String type) {
   switch (type) {
-    case 'COLLECTE_CLIENT':
-      return "📦 Collecte";
-    case 'RECEPTION_PRESTATAIRE':
-      return "🏪 Réception pressing";
-    case 'LIVRAISON_CLIENT':
-      return "🚚 Livraison";
-    default:
-      return "📸 $type";
+    case 'COLLECTE_CLIENT':      return "📦 Collecte";
+    case 'RECEPTION_PRESTATAIRE': return "🏪 Réception"; // ← plus "pressing"
+    case 'LIVRAISON_CLIENT':     return "🚚 Livraison";
+    case 'AVANT_INTERVENTION':   return "📸 Avant";
+    case 'APRES_INTERVENTION':   return "✅ Après";
+    default:                     return "📸 $type";
   }
 }
 }

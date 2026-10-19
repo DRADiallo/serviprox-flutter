@@ -18,6 +18,7 @@ class CommandeModel {
   final double montantTotal;
   final String dateCommande;
   final String motDepot;
+  final bool avecAgent; // ← AJOUT
   final String nomClient;
   final String nomPrestataire;
   final List<Map<String, dynamic>> lignes;
@@ -38,6 +39,7 @@ class CommandeModel {
     required this.montantTotal,
     required this.dateCommande,
     required this.motDepot,
+    required this.avecAgent,
     required this.nomClient,
     required this.nomPrestataire,
     required this.lignes,
@@ -62,6 +64,7 @@ class CommandeModel {
         .toDouble(),
       dateCommande:   json['dateCommande'] ?? '',
       motDepot:       json['motDepot'] ?? '',
+      avecAgent:      json['avecAgent'] ?? false, // ← AJOUT
       nomClient:      json['nomClient'] ?? '',
       nomPrestataire: json['nomPrestataire'] ?? '',
       lignes:         json['lignes'] != null
@@ -119,12 +122,12 @@ class _PrestataireCommandesScreenState
   {'key': 'CREE',               'label': 'Nouvelles'},
   {'key': 'CONFIRMEE',          'label': 'Confirmées'},
   // ← AJOUT
-  {'key': 'EN_COLLECTE',        'label': '🛵 Collecte'},
+  {'key': 'EN_COLLECTE',        'label': ' Collecte'},
   {'key': 'EN_VERIFICATION',    'label': ' Vérification'},
   {'key': 'EN_TRAITEMENT',      'label': 'En cours'},
   {'key': 'TRAITEMENT_TERMINE', 'label': '🏁 Terminé'},
   // ← SUPPRIMÉ : PAIEMENT_RECU
-  {'key': 'EN_LIVRAISON',       'label': '🛵 Livraison'},
+  {'key': 'EN_LIVRAISON',       'label': ' Livraison'},
   {'key': 'VERIFICATION_FINALE','label': 'Vérif. finale'},
   // ← SUPPRIMÉ : TERMINEE
   {'key': 'CLOTUREE',           'label': ' Clôturées'},
@@ -707,10 +710,11 @@ class _PrestataireCommandesScreenState
               // ← COLLECTE_DOMICILE → dialog agent
               // DEPOT_ATELIER → confirmer direct
               onPressed: () =>
-                cmd.motDepot == 'COLLECTE_DOMICILE'
+                //cmd.motDepot == 'COLLECTE_DOMICILE'
+                  cmd.avecAgent
+
                   ? _showConfirmerAvecAgent(cmd.id)
-                  : _changerStatut(
-                      cmd.id, 'CONFIRMEE'),
+                  : _changerStatut( cmd.id, 'CONFIRMEE'),
               child: Text("✅ Confirmer",
                 style: GoogleFonts.poppins(
                   fontSize: 12,
@@ -849,7 +853,7 @@ class _PrestataireCommandesScreenState
                     Icons.price_change_outlined,
                     size: 14),
                   label: Text(
-                    "💰 Fixer prix réel",
+                    " Fixer prix réel",
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.w600)),
@@ -898,7 +902,7 @@ class _PrestataireCommandesScreenState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "💰 En attente paiement client",
+                    " En attente paiement client",
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: AppColors.amber,
@@ -1288,11 +1292,7 @@ void _showFixerPrixDialog(
 }
 
 // ← Helper input prix
-Widget _inputPrix(
-  String label,
-  TextEditingController controller,
-  IconData icon,
-) {
+Widget _inputPrix(String label,TextEditingController controller,IconData icon,) {
   return TextField(
     controller: controller,
     keyboardType: TextInputType.number,
@@ -1311,8 +1311,7 @@ Widget _inputPrix(
   );
 }
 
-Future<void> _confirmerPaiement(
-    int commandeId) async {
+Future<void> _confirmerPaiement(int commandeId) async {
   try {
     final token = await AuthStorage.getToken();
 
@@ -1354,9 +1353,15 @@ Future<void> _confirmerPaiement(
               ),
             );
 
-          // ← AJOUT : Dialog assigner agent livraison
+          // PAR Condition  ← AJOUT : Dialog assigner agent livraison
           //await _showAssignerAgentLivraison(commandeId);
+          final cmd = _commandes.firstWhere((c) => c.id == commandeId);
+          if (cmd.avecAgent) {
           _showChoixLivraisonDialog(commandeId);
+          } else {
+          await _changerStatut(commandeId, 'CLOTUREE');
+          }
+
         }
       }
     }

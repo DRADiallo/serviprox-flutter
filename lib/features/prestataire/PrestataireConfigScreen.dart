@@ -397,6 +397,7 @@ void _removePrestation(int index) {
                           bottom: 8),
                         child: Row(
                           children: [
+                            const SizedBox(width: 38), // ← aligne avec l'icône des lignes
                             Expanded(
                               flex: 3,
                               child: Text("Prestation",
@@ -431,15 +432,29 @@ void _removePrestation(int index) {
                         ),
                       ),
 
-                      // ← Liste unifiée
-                      ..._prestations
-                        .asMap()
-                        .entries
-                        .map((e) =>
-                          _buildPrestationRow(
-                            e.key, e.value)),
+                      // // ← Liste unifiée
+                      // ..._prestations
+                      //   .asMap()
+                      //   .entries
+                      //   .map((e) =>
+                      //     _buildPrestationRow(
+                      //       e.key, e.value)),
 
-                      const SizedBox(height: 8),
+                      // ← Liste unifiée scrollable
+                      SizedBox(
+                        height: 400,
+                        child: ListView.builder(
+                          physics:
+                            const ClampingScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: _prestations.length,
+                          itemBuilder: (_, i) =>
+                            _buildPrestationRow(
+                              i, _prestations[i]),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
 
                       // ← Exemples inspirants
                       Container(
@@ -474,10 +489,15 @@ void _removePrestation(int index) {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6, runSpacing: 6,
-                              children: _exemples.map((e) =>
-                                GestureDetector(
+                            SizedBox(
+                              height: 72,
+                              child: SingleChildScrollView(
+                                physics:
+                                  const ClampingScrollPhysics(),
+                                child: Wrap(
+                                  spacing: 6, runSpacing: 6,
+                                  children: _exemples.map((e) =>
+                                    GestureDetector(
                                   onTap: () => _addPrestation(
                                     nom:   e['nom']!,
                                     prix:  e['prix']!,
@@ -506,6 +526,8 @@ void _removePrestation(int index) {
                                     ),
                                   ),
                                 )).toList(),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -788,7 +810,7 @@ void _removePrestation(int index) {
                 color: AppColors.textMuted),
               contentPadding:
                 const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 10),
+                  horizontal: 10, vertical: 8),
               border: OutlineInputBorder(
                 borderRadius:
                   BorderRadius.circular(8),
@@ -827,7 +849,7 @@ void _removePrestation(int index) {
                 color: AppColors.textMuted),
               contentPadding:
                 const EdgeInsets.symmetric(
-                  horizontal: 6, vertical: 10),
+                  horizontal: 6, vertical: 8),
               border: OutlineInputBorder(
                 borderRadius:
                   BorderRadius.circular(8),
@@ -851,6 +873,7 @@ void _removePrestation(int index) {
         Expanded(
           flex: 2,
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             value: _unites.contains(
               p['unite']!.text)
               ? p['unite']!.text : 'pièce',
@@ -860,7 +883,7 @@ void _removePrestation(int index) {
             decoration: InputDecoration(
               contentPadding:
                 const EdgeInsets.symmetric(
-                  horizontal: 6, vertical: 10),
+                  horizontal: 6, vertical: 8),
               border: OutlineInputBorder(
                 borderRadius:
                   BorderRadius.circular(8),
