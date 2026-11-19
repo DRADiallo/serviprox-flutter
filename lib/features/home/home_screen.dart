@@ -5,14 +5,16 @@ import 'package:http/http.dart' as http;
 // dart:convert = pour encoder/décoder le JSON
 import 'dart:convert';
 import 'package:memoireserviprox/features/auth/login_screen.dart';
+import 'package:memoireserviprox/features/client/Liste_prestataires_screen.dart';
 import 'package:memoireserviprox/features/client/client_commandes_screen.dart';
+import 'package:memoireserviprox/features/pressing/pressing_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 // AuthStorage = gère le token JWT en local (SharedPreferences)
 import '../../core/services/auth_storage.dart';
-import '../pressing/pressing_screen.dart';
-import '../reparation/reparation_screen.dart';
-import '../soins/soins_screen.dart';
+// import '../pressing/pressing_screen.dart';
+// import '../reparation/reparation_screen.dart';
+// import '../soins/soins_screen.dart';
 
 // ══════════════════════════════════════════════════════════
 // HomeScreen — Widget racine avec navigation
@@ -488,8 +490,11 @@ class _HomeContentState extends State<_HomeContent> {
   // SANS modifier une seule ligne de code Flutter !
   Future<void> _loadServices() async {
     try {
+      final token = await AuthStorage.getToken();          // ← AJOUT JWT
       final response = await http.get(
-        Uri.parse(ApiConstants.servicesActifs));
+        Uri.parse(ApiConstants.servicesActifs),
+        headers: {'Authorization': 'Bearer $token'},       // ← AJOUT JWT
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data =
@@ -548,86 +553,90 @@ class _HomeContentState extends State<_HomeContent> {
   // Pourquoi pas un switch/case ?
   // → contains() est plus souple pour les variantes
   //   "Réparation" et "reparation" → même résultat
+//   
+
   Map<String, dynamic> _getServiceConfig(String type) {
-    // toLowerCase() = normalise pour éviter les problèmes
-    // de casse (Pressing ≠ pressing ≠ PRESSING)
-    final t = type.toLowerCase();
+  final t = type.toLowerCase();
 
   if (t.contains('pressing')) {
     return {
-        'color': AppColors.primary,
-        'lightColor': AppColors.primaryLight,
-        // ← CHANGEMENT : icône au lieu d'emoji
-        'emoji': null,
-        //'icon': Icons.checkroom_rounded, // ← icône chemise/vêtement
-        'icon': Icons.local_laundry_service_rounded,
-        'description':
-          'Collecte de votre linge à domicile, '
+      'color': AppColors.primary,
+      'lightColor': AppColors.primaryLight,
+      'emoji': null,
+      'icon': Icons.local_laundry_service_rounded,
+      'description': 'Collecte de votre linge à domicile, '
           'nettoyage professionnel en atelier et '
           'livraison retour chez vous.',
-        'features': [
-          'Collecte à domicile',
-          'Traitement en atelier',
-          'Livraison retour',
-          'Double preuve sécurisée',
-        ],
-        'count': '$_countPressing prestataires',
-        'screen': const PressingScreen(),
-  };
-} else if (t.contains('reparation') ||
-               t.contains('réparation')) {
-      return {
-        'color': AppColors.green,       // Vert
-        'lightColor': AppColors.greenLight,
-        'emoji': '🔧',
-        'description':
-          'Réparation de vos appareils électroniques '
-          'et électroménagers par des techniciens '
-          'qualifiés.',
-        'features': [
-          'Smartphone & Informatique',
-          'Électroménager',
-          'Devis obligatoire',
-          'Garantie sur réparation',
-        ],
-        'count': '$_countReparation techniciens',
-        'screen': const ReparationScreen(),
-      };
-    } else if (t.contains('soins') || t.contains('domicile')) {
-      return {
-        'color': AppColors.purple,      // Violet
-        'lightColor': AppColors.purpleLight,
-        //'emoji': '🏠',
-        'emoji': null,
-        'icon': Icons.handshake_rounded,
-        'description':
-          'Des intervenants qualifiés se déplacent '
+      'features': [
+        'Collecte à domicile',
+        'Traitement en atelier',
+        'Livraison retour',
+        'Double preuve sécurisée',
+      ],
+      'count': '$_countPressing prestataires',
+      'screen': ListePrestatairesScreen(           // ✅ CORRIGÉ
+        typeServiceNom: 'PRESSING',
+        titre: 'Pressing',
+        themeColor: AppColors.primary,
+      ),
+    };
+  } else if (t.contains('reparation') || t.contains('réparation')) {
+    return {
+      'color': AppColors.green,
+      'lightColor': AppColors.greenLight,
+      'emoji': '🔧',
+      'description': 'Réparation de vos appareils électroniques '
+          'et électroménagers par des techniciens qualifiés.',
+      'features': [
+        'Smartphone & Informatique',
+        'Électroménager',
+        'Devis obligatoire',
+        'Garantie sur réparation',
+      ],
+      'count': '$_countReparation techniciens',
+      'screen': ListePrestatairesScreen(           // ✅ AJOUTÉ (était commenté)
+        typeServiceNom: 'REPARATION',
+        titre: 'Réparateurs',
+        themeColor: AppColors.green,
+      ),
+    };
+  } else if (t.contains('soins') || t.contains('domicile')) {
+    return {
+      'color': AppColors.purple,
+      'lightColor': AppColors.purpleLight,
+      'emoji': null,
+      'icon': Icons.handshake_rounded,
+      'description': 'Des intervenants qualifiés se déplacent '
           'chez vous pour la coiffure et l\'entretien.',
-        'features': [
-          'Coiffure à domicile',
-          'Entretien ménager',
-          'Aide & assistance',
-          'Désinsectisation',
-        ],
-        'count': '$_countSoins intervenants',
-        'screen': const SoinsScreen(),
-      };
-    } else {
-      // ← Nouveau service ajouté par l'admin !
-      // Config générique pour tout service inconnu
-      // Garantit que l'app ne plante pas si admin
-      // ajoute "Jardinage" ou "Plomberie"
-      return {
-        'color': AppColors.primary,
-        'lightColor': AppColors.primaryLight,
-        'emoji': '⚙️',
-        'description': 'Service disponible dans votre zone.',
-        'features': ['Disponible', 'Professionnel'],
-        'count': 'Prestataires disponibles',
-        'screen': const PressingScreen(),
-      };
-    }
+      'features': [
+        'Coiffure à domicile',
+        'Entretien ménager',
+        'Aide & assistance',
+        'Désinsectisation',
+      ],
+      'count': '$_countSoins intervenants',
+      'screen': ListePrestatairesScreen(           // ✅ AJOUTÉ (était commenté)
+        typeServiceNom: 'SOINS',
+        titre: 'Soins à domicile',
+        themeColor: AppColors.purple,
+      ),
+    };
+  } else {
+    return {
+      'color': AppColors.primary,
+      'lightColor': AppColors.primaryLight,
+      'emoji': '⚙️',
+      'description': 'Service disponible dans votre zone.',
+      'features': ['Disponible', 'Professionnel'],
+      'count': 'Prestataires disponibles',
+      'screen': ListePrestatairesScreen(           // ✅ CORRIGÉ (était PressingScreen)
+        typeServiceNom: type.toUpperCase(),
+        titre: type,
+        themeColor: AppColors.primary,
+      ),
+    };
   }
+}
 
   // ══════════════════════════════════════════════════════
   // BUILD — Construction de l'interface

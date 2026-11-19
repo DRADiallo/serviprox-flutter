@@ -357,12 +357,13 @@ class PressingDetailScreen extends StatelessWidget {
           child: ElevatedButton(
             // ← Désactivé si fermé
             onPressed: pressing.ouvert
-              ? () => Navigator.push(context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                      PressingCommandeScreen(
-                        pressing: pressing)))
-              : null,
+              ? () => Navigator.pushNamed(
+                context,
+                '/nouvelle-commande',
+                arguments: {
+                  'prestataireId': pressing.id,
+                })
+            : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: pressing.ouvert
                 ? AppColors.primary

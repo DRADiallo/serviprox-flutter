@@ -7,11 +7,6 @@
 // SharedPreferences = stockage clé-valeur sur le téléphone
 // → Comme une Map<String, String> qui persiste
 //   même après fermeture de l'app
-//
-// Exemple :
-// await AuthStorage.saveToken("eyJhbGci...")
-// → Stocké sur le téléphone
-// → Disponible à la prochaine ouverture
 // ═══════════════════════════════════════════════════════
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,19 +14,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthStorage {
 
   // ── Clés de stockage ──────────────────────────────
-  // Constantes pour éviter les fautes de frappe
-  // Ex: 'token' partout → une seule définition ici
-  static const String _keyToken   = 'token';
-  static const String _keyUserId  = 'userId';
-  static const String _keyNom     = 'nom';
-  static const String _keyPrenom  = 'prenom';
-  static const String _keyEmail   = 'email';
-  static const String _keyRole    = 'role';
-  static const String _keyAdresse = 'adresse';
+  static const String _keyToken       = 'token';
+  static const String _keyUserId      = 'userId';
+  static const String _keyNom         = 'nom';
+  static const String _keyPrenom      = 'prenom';
+  static const String _keyEmail       = 'email';
+  static const String _keyRole        = 'role';
+  static const String _keyAdresse     = 'adresse';
+  static const String _keyTypeService = 'typeService'; // ← AJOUT
 
   // ── SAUVEGARDER après login/inscription ──────────
-  // Appelé après POST /api/auth/login ou register
-  // Stocke toutes les infos de la réponse JWT
   static Future<void> saveUserData({
     required String token,
     required int userId,
@@ -40,11 +32,7 @@ class AuthStorage {
     required String email,
     required String role,
   }) async {
-    // getInstance() = ouvre le stockage local
     final prefs = await SharedPreferences.getInstance();
-
-    // setString() = stocke une valeur String
-    // setInt()    = stocke une valeur int
     await prefs.setString(_keyToken,  token);
     await prefs.setInt(_keyUserId,    userId);
     await prefs.setString(_keyNom,    nom);
@@ -54,9 +42,6 @@ class AuthStorage {
   }
 
   // ── LIRE les données stockées ─────────────────────
-  // getString() retourne null si la clé n'existe pas
-  // ?? = opérateur "null coalescing" :
-  //   valeur ?? 'defaut' → si null → utilise 'defaut'
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyToken);
@@ -86,33 +71,40 @@ class AuthStorage {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyRole) ?? '';
   }
-  
-  // ── SAUVEGARDER l'adresse ─────────────────────────────
+
+  // ── ADRESSE ───────────────────────────────────────
   static Future<void> saveAdresse(String adresse) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_keyAdresse, adresse);
-}
-// ── LIRE l'adresse ─────────────────────────────
-static Future<String> getAdresse() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString(_keyAdresse) ?? 'Dakar, Sénégal';
-}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAdresse, adresse);
+  }
+
+  static Future<String> getAdresse() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyAdresse) ?? 'Dakar, Sénégal';
+  }
+
+  // ── TYPE SERVICE (Prestataire) ────────────────────
+  // Sauvegardé après login ou config initiale
+  // Utilisé pour afficher le badge dans PrestataireHomeScreen
+  static Future<void> saveTypeService(String typeService) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyTypeService, typeService);
+  }
+
+  static Future<String> getTypeService() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyTypeService) ?? '';
+  }
 
   // ── VÉRIFIER si connecté ──────────────────────────
-  // Utilisé dans SplashScreen pour rediriger
-  // directement vers HomeScreen si déjà connecté
   static Future<bool> isLoggedIn() async {
     final token = await getToken();
-    // token != null ET token non vide = connecté
     return token != null && token.isNotEmpty;
   }
 
   // ── DÉCONNEXION ───────────────────────────────────
-  // Supprime toutes les données stockées
-  // Appelé quand l'utilisateur clique "Déconnexion"
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    // clear() = supprime TOUT le stockage
     await prefs.clear();
   }
 }
