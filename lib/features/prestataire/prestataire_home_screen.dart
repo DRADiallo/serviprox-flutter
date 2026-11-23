@@ -521,7 +521,7 @@ class _PrestataireHomeScreenState
                       context,
                       MaterialPageRoute(
                           builder: (_) =>
-                              const ConfigurerServiceScreen()),
+                              const ConfigurerServiceScreenV2()),
                     );
                     // Recharger après retour config
                     _loadData();
@@ -791,7 +791,7 @@ class _PrestataireHomeScreenState
                 context,
                 MaterialPageRoute(
                     builder: (_) =>
-                        const ConfigurerServiceScreen()),
+                        const ConfigurerServiceScreenV2()),
               );
               _loadData();
             },
@@ -908,7 +908,7 @@ class _PrestataireHomeScreenState
                 context,
                 MaterialPageRoute(
                     builder: (_) =>
-                        const ConfigurerServiceScreen()),
+                        const ConfigurerServiceScreenV2()),
               );
               _loadData();
             },

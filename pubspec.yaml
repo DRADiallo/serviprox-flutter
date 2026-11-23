@@ -40,6 +40,9 @@ dependencies:
   fl_chart: ^0.69.0
 
   image_picker: ^1.1.2
+
+  # URL launcher
+  url_launcher: ^6.3.0
   
   # Navigation
   go_router: ^13.2.0

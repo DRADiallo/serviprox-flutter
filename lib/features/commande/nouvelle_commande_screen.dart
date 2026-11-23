@@ -48,10 +48,10 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
     final i = _p['icone'] ?? _p['emoji'];
     if (i != null && i.toString().isNotEmpty) return i.toString();
     const map = {
-      'pressing': '🧺',
+      'pressing': '',
       'reparation': '🔧',
-      'coiffure': '💇',
-      'soins': '💆',
+      'coiffure': '',
+      'soins': '',
     };
     return map[_str('typeService').toLowerCase()] ?? '🏪';
   }
@@ -84,9 +84,19 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
         return (jsonDecode(m) as List).map((e) => e.toString()).toList();
       }
     } catch (_) {}
-    final avecAgent = _p['avecAgent'] as bool? ?? false;
-    return ['DEPOT_MAGASIN', if (avecAgent) 'COLLECTE_DOMICILE'];
+    return []; // null côté backend → section masquée
   }
+  // List<String> get _modesDepot {
+  //   try {
+  //     final m = _p['modesDepotEffectifs'];
+  //     if (m is List) return m.map((e) => e.toString()).toList();
+  //     if (m is String && m.isNotEmpty) {
+  //       return (jsonDecode(m) as List).map((e) => e.toString()).toList();
+  //     }
+  //   } catch (_) {}
+  //   final avecAgent = _p['avecAgent'] as bool? ?? false;
+  //   return ['DEPOT_MAGASIN', if (avecAgent) 'COLLECTE_DOMICILE'];
+  // }
 
   /// Prix unitaire d'une prestation (gère prix ou prixUnitaire)
   int _prixUnitaire(Map<String, dynamic> p) {
@@ -134,10 +144,12 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
   }
 
   /// Total calculé
-  int get _total {
+ int get _total {
     int t = 0;
-    for (final p in _prestations) {
-      final id = p['id'] as int? ?? p['typePrestationId'] as int? ?? 0;
+    final list = _prestations;
+    for (int i = 0; i < list.length; i++) {
+      final p = list[i];
+      final id = p['id'] as int? ?? p['typePrestationId'] as int? ?? i;
       final qte = _qte(id);
       if (qte > 0) t += _prixUnitaire(p) * qte;
     }
@@ -169,9 +181,14 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
       _snack('Sélectionnez au moins une prestation.', isError: true);
       return;
     }
+        // Si pas de modes configurés → dépôt atelier silencieux
     if (_selectedMode == null) {
-      _snack('Choisissez un mode de dépôt / collecte.', isError: true);
-      return;
+      if (_modesDepot.isEmpty) {
+        _selectedMode = 'DEPOT_MAGASIN';
+      } else {
+        _snack('Choisissez un mode de dépôt / collecte.', isError: true);
+        return;
+      }
     }
     if (_needsAdresse &&
         _adresseController.text.trim().isEmpty) {
@@ -189,9 +206,11 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
           _p['id'] as int? ?? _p['prestataireId'] as int? ?? 0;
 
       // Construction des lignes commande
-      final lignes = <Map<String, dynamic>>[];
-      for (final p in _prestations) {
-        final id = p['id'] as int? ?? p['typePrestationId'] as int? ?? 0;
+       final lignes = <Map<String, dynamic>>[];
+      final prestList = _prestations;
+      for (int i = 0; i < prestList.length; i++) {
+        final p = prestList[i];
+        final id = p['id'] as int? ?? p['typePrestationId'] as int? ?? i;
         final qte = _qte(id);
         if (qte <= 0) continue;
         lignes.add({
@@ -332,6 +351,17 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
     ));
   }
 
+
+    @override
+  void initState() {
+    super.initState();
+    // Auto-sélectionner si un seul mode disponible
+    final modes = _modesDepot;
+    if (modes.length == 1) {
+      _selectedMode = modes.first;
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────
 
   @override
@@ -363,12 +393,14 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
               _buildPrestationsCard(),
               const SizedBox(height: 24),
 
-              // ── Mode dépôt ────────────────────────────
-              _buildSectionTitle('MODE DE DÉPÔT / COLLECTE',
-                  Icons.local_shipping_outlined),
-              const SizedBox(height: 10),
-              _buildModesDepotCard(),
-              const SizedBox(height: 8),
+              // ── Mode dépôt (masqué si prestataire n'a pas configuré) ──
+              if (_modesDepot.isNotEmpty) ...[
+                _buildSectionTitle('MODE DE DÉPÔT / COLLECTE',
+                    Icons.local_shipping_outlined),
+                const SizedBox(height: 10),
+                _buildModesDepotCard(),
+                const SizedBox(height: 8),
+              ],
 
               // ── Adresse (conditionnel) ─────────────────
               AnimatedCrossFade(
@@ -546,16 +578,16 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
         children: [
           for (int i = 0; i < prestations.length; i++) ...[
             if (i > 0) _divider(),
-            _buildPrestationRow(prestations[i]),
+            _buildPrestationRow(prestations[i], i),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildPrestationRow(Map<String, dynamic> p) {
+  Widget _buildPrestationRow(Map<String, dynamic> p, int idx) {
     final id =
-        p['id'] as int? ?? p['typePrestationId'] as int? ?? 0;
+        p['id'] as int? ?? p['typePrestationId'] as int? ?? idx;
     final nom = p['nom']?.toString() ??
         p['label']?.toString() ??
         p['typePrestation']?.toString() ??
@@ -800,10 +832,12 @@ class _NouvelleCommandeScreenState extends State<NouvelleCommandeScreen> {
   Widget _buildRecap() {
     if (!_hasLignes) return const SizedBox.shrink();
 
+    
     final lignes = <Map<String, dynamic>>[];
-    for (final p in _prestations) {
-      final id =
-          p['id'] as int? ?? p['typePrestationId'] as int? ?? 0;
+    final recapList = _prestations;
+    for (int i = 0; i < recapList.length; i++) {
+      final p = recapList[i];
+      final id = p['id'] as int? ?? p['typePrestationId'] as int? ?? i;
       final qte = _qte(id);
       if (qte > 0) {
         lignes.add({
