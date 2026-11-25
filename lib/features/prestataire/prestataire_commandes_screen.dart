@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/auth_storage.dart';
+import '../../core/services/commande_notifier.dart';
 
 class PrestataireCommandesScreen extends StatefulWidget {
   const PrestataireCommandesScreen({super.key});
@@ -40,6 +41,8 @@ class _PrestataireCommandesScreenState
   bool _avecAgent = false;
   int _prestataireId = 0;
 
+  VoidCallback? _fcmListener;
+
   // Couche 1 universels — NE JAMAIS ajouter des étapes métier ici
   static const Set<String> _couche1 = {
     'CREE', 'CONFIRMEE', 'EN_COURS', 'ATTENTE_PAIEMENT',
@@ -63,12 +66,28 @@ class _PrestataireCommandesScreenState
   final List<String> _filtres = [
     'Toutes', 'Créées', 'Confirmées', 'En cours', 'Clôturées',
   ];
-
+  
+  
   @override
   void initState() {
     super.initState();
     _init();
+
+    // FCM → refresh silencieux automatique
+  _fcmListener = () {
+    if (_prestataireId > 0 && mounted) _loadCommandes();
+  };
+  commandeRefreshTrigger.addListener(_fcmListener!);
   }
+
+  @override
+  void dispose() {
+  if (_fcmListener != null) {
+    commandeRefreshTrigger.removeListener(_fcmListener!);
+  }
+  super.dispose();
+  }
+
 
   Future<void> _init() async {
     final id = await AuthStorage.getUserId();
@@ -353,15 +372,17 @@ class _PrestataireCommandesScreenState
   String _cap(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 
-  void _ouvrirDetail(Map<String, dynamic> cmd) {
-    Navigator.pushNamed(context, '/commande-detail', arguments: {
-      'commande': cmd,
-      'etapesEffectives': _getCommandeEtapes(cmd),
-      'agents': _agents,
-      'prestataireId': _prestataireId,
-      'avecAgent': _avecAgent,
-    }).then((_) => _loadCommandes());
-  }
+  void _ouvrirDetail(Map<String, dynamic> cmd) async {
+  await Future.delayed(const Duration(milliseconds: 80));
+  if (!mounted) return;
+  Navigator.pushNamed(context, '/commande-detail', arguments: {
+    'commande': cmd,
+    'etapesEffectives': _getCommandeEtapes(cmd),
+    'agents': _agents,
+    'prestataireId': _prestataireId,
+    'avecAgent': _avecAgent,
+  }).then((_) => _loadCommandes());
+}
 
   // ── Fixer le prix réel (exigeDevis) ──────────────────────────────────────
   Future<void> _showFixerPrixDialog(Map<String, dynamic> cmd) async {

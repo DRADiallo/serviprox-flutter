@@ -2,7 +2,8 @@ class ApiConstants {
   // ← Remplacer par l'IP de votre machine
   // Chrome (émulateur) → 10.0.2.2
   // Samsung (physique) → '192.168.1.239'
-  static const String _host = '10.130.129.83';
+  static const String _host = '192.168.1.239';
+  //static const String _host = 'localhost';
 
   static const String baseUrl =
       'http://$_host:7090/api';

@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:memoireserviprox/core/widgets/photos_commande_widget.dart';
 import 'package:memoireserviprox/features/client/client_detail_commande_screen.dart';
+import 'package:memoireserviprox/main.dart' hide commandeRefreshTrigger;
 import 'dart:convert';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/services/auth_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/services/commande_notifier.dart';
 
 class ClientCommandesScreen extends StatefulWidget {
   const ClientCommandesScreen({super.key});
@@ -120,14 +122,26 @@ class _ClientCommandesScreenState
   void initState() {
     super.initState();
     _loadCommandes();
+     // ← AJOUTER : écoute FCM sans timer
+  _fcmListener = () => _loadCommandes(silent: true);
+   commandeRefreshTrigger.addListener(_fcmListener!);
+
     // _refreshTimer = Timer.periodic(
     // const Duration(seconds: 15),
     // (_) => _loadCommandes(silent: true),
   
   }
+  
+  // AJOUTER ce champ
+VoidCallback? _fcmListener;
 
   @override
   void dispose() {
+
+     // ← AJOUTER : nettoyer
+  if (_fcmListener != null) {
+    commandeRefreshTrigger.removeListener(_fcmListener!);
+  }
  // _refreshTimer?.cancel();
   super.dispose();
 }

@@ -76,6 +76,7 @@ import 'core/services/notification_service.dart';
 
 import 'features/auth/splash_screen.dart';
 import 'firebase_options.dart';
+import 'core/services/commande_notifier.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(
@@ -84,6 +85,9 @@ Future<void> _firebaseMessagingBackgroundHandler(
       options: DefaultFirebaseOptions.currentPlatform);
   debugPrint("Notification arrière-plan: ${message.notification?.title}");
 }
+
+// Notifier global — incrémenté à chaque notif FCM commande
+final ValueNotifier<int> commandeRefreshTrigger = ValueNotifier(0);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,6 +103,15 @@ void main() async {
   } catch (e) {
     debugPrint("⚠️ Firebase ignoré: $e");
   }
+
+  // ── Auto-refresh FCM ────────────────────────────────────────────────
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  final type = message.data['type'] ?? '';
+  if (type.contains('COMMANDE') || type.contains('ETAPE') ||
+      type.contains('PRIX')     || type.contains('NOUVELLE')) {
+    commandeRefreshTrigger.value++;
+  }
+});
 
   runApp(
     ChangeNotifierProvider(

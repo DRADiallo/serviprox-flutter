@@ -542,24 +542,24 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
   // ── Carte infos client ─────────────────────────────────────────────────────
   Widget _buildInfoCard() {
-    return _card(
-      title: 'Informations',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _infoRow(Icons.person_outline, 'Client',
-              _cmd['clientNom'] as String? ?? '-'),
-          _infoRow(Icons.phone_outlined, 'Téléphone',
-              _cmd['clientTel'] as String? ?? '-'),
-          _infoRow(Icons.location_on_outlined, 'Adresse',
-              _cmd['adresse'] as String? ?? '-'),
-          if (_cmd['dateCreation'] != null)
-            _infoRow(Icons.calendar_today_outlined, 'Date',
-                _formatDate(_cmd['dateCreation'] as String)),
-        ],
-      ),
-    );
-  }
+  return _card(
+    title: 'Informations',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _infoRow(Icons.person_outline, 'Client',
+            _cmd['nomClient'] as String? ?? '-'),          // ← était clientNom
+        _infoRow(Icons.phone_outlined, 'Téléphone',
+            _cmd['telephoneClient'] as String? ?? '-'),    // ← était clientTel
+        _infoRow(Icons.location_on_outlined, 'Mode dépôt',
+            _cmd['modeDepot'] as String? ?? '-'),          // ← remplace adresse
+        if (_cmd['dateCommande'] != null)
+          _infoRow(Icons.calendar_today_outlined, 'Date',
+              _formatDate(_cmd['dateCommande'].toString())),// ← était dateCreation
+      ],
+    ),
+  );
+}
 
   Widget _infoRow(IconData icon, String label, String value) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
