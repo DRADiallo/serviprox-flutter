@@ -90,14 +90,15 @@ class _PrestataireCommandesScreenState
 
 
   Future<void> _init() async {
-    final id = await AuthStorage.getUserId();
-    if (id == null) {
-      if (mounted) setState(() { _error = 'Session expirée'; _loading = false; });
-      return;
-    }
-    _prestataireId = id;
-    await Future.wait([_loadConfig(), _loadCommandes()]);
+  final id = await AuthStorage.getUserId();
+  if (id == null) {
+    if (mounted) setState(() { _error = 'Session expirée'; _loading = false; });
+    return;
   }
+  _prestataireId = id;
+  await Future.wait([_loadConfig(), _loadCommandes()]);
+  if (mounted) setState(() => _loading = false);  //  AJOUT CETTE LIGNE
+}
 
   // ── Charger la configuration du prestataire ────────────────────────────
   Future<void> _loadConfig() async {
@@ -169,9 +170,9 @@ class _PrestataireCommandesScreenState
       );
       if (res.statusCode == 200) {
         final list = (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
-        if (mounted) setState(() { _commandes = list; _loading = false; });
+        if (mounted) setState(() { _commandes = list; }); // ← _loading géré par _init()
       } else {
-        if (mounted) setState(() { _error = 'Erreur ${res.statusCode}'; _loading = false; });
+      if (mounted) setState(() { _error = 'Erreur ${res.statusCode}'; _loading = false; });
       }
     } catch (e) {
       if (mounted) setState(() { _error = 'Connexion impossible'; _loading = false; });
@@ -355,7 +356,7 @@ class _PrestataireCommandesScreenState
     final statut = cmd['statut'] as String? ?? 'CREE';
     switch (statut) {
       case 'CREE': return '✅ Confirmer';
-      case 'CONFIRMEE': return '🚀 Démarrer';
+      case 'CONFIRMEE': return ' Démarrer';
       case 'ATTENTE_PAIEMENT': return '💳 Confirmer paiement reçu';
       case 'EN_COURS':
         final etapes = _getCommandeEtapes(cmd);
@@ -659,7 +660,7 @@ class _PrestataireCommandesScreenState
                         fontWeight: FontWeight.w600, fontSize: 14,
                         color: AppColors.textPrimary)),
                 const SizedBox(height: 2),
-                Text(cmd['clientNom'] as String? ?? 'Client',
+                Text(cmd['nomClient'] as String? ?? 'Client',
                     style: GoogleFonts.poppins(
                         fontSize: 12, color: AppColors.textSecond)),
               ])),

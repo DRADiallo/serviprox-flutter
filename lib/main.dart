@@ -164,6 +164,8 @@ class ServiProxApp extends StatelessWidget {
                 agents: (args?['agents'] as List<dynamic>? ?? [])
                     .cast<Map<String, dynamic>>(),
                 prestataireId: args?['prestataireId'] as int? ?? 0,
+                avecAgent: args?['avecAgent'] as bool? ?? false,
+              
               ));
 
           default:
