@@ -244,7 +244,7 @@ class _PrestataireHomeScreenState
   // ─────────────────────────────────────────────────
   String get _labelTypeService {
     switch (_typeService.toLowerCase()) {
-      case 'pressing':    return '🧺 Pressing';
+      case 'pressing':    return ' Pressing';
       case 'nettoyage':   return '🧹 Nettoyage';
       case 'laverie':     return '👕 Laverie';
       case 'plomberie':   return '🔧 Plomberie';
@@ -259,12 +259,12 @@ class _PrestataireHomeScreenState
   // ─────────────────────────────────────────────────
   // ÉCRANS DE NAVIGATION
   // ─────────────────────────────────────────────────
-  List<Widget> get _screens => [
-    _buildAccueil(),
-    const PrestataireCommandesScreen(),
-    if (_avecAgent) const PrestataireAgentsScreen(),
-    const PrestataireStatistiquesScreen(),
-  ];
+  // List<Widget> get _screens => [
+  //   _buildAccueil(),
+  //   const PrestataireCommandesScreen(),
+  //   if (_avecAgent) const PrestataireAgentsScreen(),
+  //   const PrestataireStatistiquesScreen(),
+  // ];
 
   // ─────────────────────────────────────────────────
   // BUILD PRINCIPAL
@@ -285,8 +285,15 @@ class _PrestataireHomeScreenState
               color: AppColors.green,
               onRefresh: _loadData,
               child: IndexedStack(
-                index: _selectedIndex,
-                children: _screens,
+                  index: _avecAgent
+                      ? _selectedIndex
+                      : const [0, 1, 3][_selectedIndex.clamp(0, 2)],
+                  children: [
+                      _buildAccueil(),
+                      const PrestataireCommandesScreen(),
+                      const PrestataireAgentsScreen(),   // ← TOUJOURS là, jamais retiré
+                      const PrestataireStatistiquesScreen(),
+                  ],
               ),
             ),
       bottomNavigationBar: _buildBottomNav(),

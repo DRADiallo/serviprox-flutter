@@ -486,9 +486,10 @@ class _PrestataireCommandesScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              setState(() => _loading = true);
-              _loadCommandes();
+            onPressed: () async {
+                setState(() => _loading = true);
+                await _loadCommandes();
+                if (mounted) setState(() => _loading = false);
             },
           ),
         ],
